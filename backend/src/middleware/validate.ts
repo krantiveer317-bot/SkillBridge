@@ -13,7 +13,7 @@ export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
       return;
     }
     // Replace the target with the parsed (coerced/transformed) data
-    (req as Record<string, unknown>)[target] = result.data;
+    (req as unknown as Record<string, unknown>)[target] = result.data;
     next();
   };
 }
@@ -26,3 +26,4 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
     return acc;
   }, {});
 }
+

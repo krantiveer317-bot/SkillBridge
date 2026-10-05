@@ -12,7 +12,7 @@ export class CompanyController {
 
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await companyService.findById(req.params.id);
+      const data = await companyService.findById((req.params.id as string));
       sendSuccess(res, 'Company retrieved', data);
     } catch (err) { next(err); }
   }
@@ -40,3 +40,4 @@ export class CompanyController {
 }
 
 export const companyController = new CompanyController();
+

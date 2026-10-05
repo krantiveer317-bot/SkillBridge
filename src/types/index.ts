@@ -1,8 +1,21 @@
-export type UserRole = 'public' | 'student' | 'mentor' | 'company' | 'admin';
+export type UserRole =
+  | 'public'
+  | 'student'
+  | 'mentor'
+  | 'company'
+  | 'admin';
 
-export type SkillLevel = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+export type SkillLevel =
+  | 'Beginner'
+  | 'Intermediate'
+  | 'Advanced'
+  | 'Expert';
 
-export type VerificationTier = 'none' | 'peer' | 'mentor' | 'industry';
+export type VerificationTier =
+  | 'none'
+  | 'peer'
+  | 'mentor'
+  | 'industry';
 
 export interface User {
   id: string;
@@ -18,14 +31,22 @@ export interface User {
   portfolioUrl?: string;
   verifiedSkillsCount?: number;
   completedProjectsCount?: number;
-  trustScore?: number; // 0-100
+  trustScore?: number;
   badgeTier?: VerificationTier;
 }
 
 export interface Skill {
   id: string;
   name: string;
-  category: 'Frontend' | 'Backend' | 'DevOps & Cloud' | 'AI & ML' | 'Mobile' | 'Design & UX' | 'Blockchain' | 'Data Science';
+  category:
+    | 'Frontend'
+    | 'Backend'
+    | 'DevOps & Cloud'
+    | 'AI & ML'
+    | 'Mobile'
+    | 'Design & UX'
+    | 'Blockchain'
+    | 'Data Science';
   level: SkillLevel;
   isVerified?: boolean;
   verifiedBy?: string;
@@ -39,6 +60,7 @@ export interface Project {
   title: string;
   description: string;
   longDescription?: string;
+
   author: {
     id: string;
     name: string;
@@ -46,15 +68,28 @@ export interface Project {
     title: string;
     badgeTier?: VerificationTier;
   };
+
   skills: string[];
+
   githubUrl?: string;
   liveUrl?: string;
   bannerImage?: string;
-  verificationStatus: 'verified' | 'pending' | 'draft';
-  verificationLevel: 'Level 1: Peer Verified' | 'Level 2: Mentor Reviewed' | 'Level 3: Industry Audited' | 'Unverified';
+
+  verificationStatus:
+    | 'verified'
+    | 'pending'
+    | 'draft';
+
+  verificationLevel:
+    | 'Level 1: Peer Verified'
+    | 'Level 2: Mentor Reviewed'
+    | 'Level 3: Industry Audited'
+    | 'Unverified';
+
   starsCount: number;
   viewsCount: number;
   createdAt: string;
+
   proofDetails?: {
     testCoverage: string;
     performanceScore: string;
@@ -63,11 +98,15 @@ export interface Project {
   };
 }
 
-export type OpportunityType = 'job' | 'internship' | 'freelance';
+export type OpportunityType =
+  | 'job'
+  | 'internship'
+  | 'freelance';
 
 export interface Opportunity {
   id: string;
   title: string;
+
   company: {
     id: string;
     name: string;
@@ -75,16 +114,34 @@ export interface Opportunity {
     verified: boolean;
     location: string;
   };
+
   type: OpportunityType;
+
   category: string;
+
   description: string;
+
   compensation: string;
-  locationType: 'Remote' | 'Hybrid' | 'On-site';
+
+  locationType:
+    | 'Remote'
+    | 'Hybrid'
+    | 'On-site';
+
   requiredSkills: string[];
-  minimumVerificationTier: 'None' | 'Peer' | 'Mentor' | 'Industry';
+
+  minimumVerificationTier:
+    | 'None'
+    | 'Peer'
+    | 'Mentor'
+    | 'Industry';
+
   deadline?: string;
+
   postedAt: string;
+
   applicantCount: number;
+
   featured?: boolean;
 }
 
@@ -106,18 +163,27 @@ export interface Mentor {
 
 export interface SkillExchangeRequest {
   id: string;
+
   requester: {
     id: string;
     name: string;
     avatar: string;
     title: string;
   };
+
   offeringSkill: string;
   offeringSkillLevel: SkillLevel;
+
   seekingSkill: string;
   seekingSkillLevel: SkillLevel;
+
   message: string;
-  status: 'Open' | 'Matched' | 'Completed';
+
+  status:
+    | 'Open'
+    | 'Matched'
+    | 'Completed';
+
   createdAt: string;
 }
 
@@ -127,11 +193,22 @@ export interface Application {
   opportunityTitle: string;
   companyName: string;
   companyLogo: string;
+
   appliedDate: string;
-  status: 'Submitted' | 'Under Review' | 'Interview Scheduled' | 'Offer Extended' | 'Archived';
+
+  status:
+    | 'Submitted'
+    | 'Under Review'
+    | 'Interview Scheduled'
+    | 'Offer Extended'
+    | 'Archived';
+
   type: OpportunityType;
+
   compensation: string;
+
   lastUpdate: string;
+
   feedback?: string;
 }
 
@@ -139,12 +216,24 @@ export interface EarningTransaction {
   id: string;
   title: string;
   client: string;
-  type: 'Freelance Milestone' | 'Mentorship Booking' | 'Prize Bounty' | 'Direct Contract';
+
+  type:
+    | 'Freelance Milestone'
+    | 'Mentorship Booking'
+    | 'Prize Bounty'
+    | 'Direct Contract';
+
   amount: number;
   fee: number;
   netAmount: number;
+
   date: string;
-  status: 'Completed' | 'Pending Escrow' | 'Processing';
+
+  status:
+    | 'Completed'
+    | 'Pending Escrow'
+    | 'Processing';
+
   invoiceId: string;
 }
 
@@ -152,12 +241,26 @@ export interface VerificationRequest {
   id: string;
   projectId: string;
   projectTitle: string;
+
   applicantName: string;
   applicantId: string;
+
   skills: string[];
+
   submittedDate: string;
-  requestedLevel: 'Level 1: Peer' | 'Level 2: Mentor' | 'Level 3: Industry';
-  status: 'Pending Review' | 'In Progress' | 'Approved' | 'Changes Requested';
+
+  requestedLevel:
+    | 'Level 1: Peer'
+    | 'Level 2: Mentor'
+    | 'Level 3: Industry';
+
+  status:
+    | 'Pending Review'
+    | 'In Progress'
+    | 'Approved'
+    | 'Changes Requested';
+
   assignedReviewer?: string;
+
   proofArtifacts: string[];
 }

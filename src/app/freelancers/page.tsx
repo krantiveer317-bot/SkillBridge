@@ -1,26 +1,191 @@
-'use client';
+﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ProfileCard } from '@/components/ui/ProfileCard';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { mockFreelancers } from '@/data/mockData';
-import { Search, Sparkles, CheckCircle2 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
+import {
+  Search,
+  Sparkles,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
+
+interface Freelancer {
+  id: string;
+  name: string;
+  title: string;
+  avatar?: string | null;
+  bio?: string | null;
+  skills: string[];
+  verified?: boolean;
+  rating?: number;
+  reviewsCount?: number;
+  hourlyRate?: number;
+  location?: string | null;
+}
 
 export default function FreelancersPage() {
   const [search, setSearch] = useState('');
-  const [selectedFreelancer, setSelectedFreelancer] = useState<typeof mockFreelancers[0] | null>(null);
+  const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
+  const [selectedFreelancer, setSelectedFreelancer] =
+    useState<Freelancer | null>(null);
   const [messageSent, setMessageSent] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filteredFreelancers = mockFreelancers.filter((fl) => {
-    return (
-      fl.name.toLowerCase().includes(search.toLowerCase()) ||
-      fl.title.toLowerCase().includes(search.toLowerCase()) ||
-      fl.skills.some((s) => s.toLowerCase().includes(search.toLowerCase()))
-    );
-  });
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFreelancers() {
+      try {
+        setLoading(true);
+        setError('');
+
+        const result = await apiFetch<any>(
+          '/freelance?page=1&limit=100',
+          { auth: false }
+        );
+
+        if (cancelled) return;
+
+        const rows = Array.isArray(result)
+          ? result
+          : result?.freelancers ??
+            result?.workers ??
+            result?.data ??
+            result?.contracts ??
+            [];
+
+        const mapped: Freelancer[] = rows
+          .map((item: any) => {
+            const worker =
+              item?.worker ||
+              item?.freelancer ||
+              item?.user ||
+              item?.client ||
+              item;
+
+            const profile =
+              worker?.profile ||
+              item?.profile ||
+              {};
+
+            const skills =
+              item?.skills ??
+              worker?.skills ??
+              profile?.skills ??
+              [];
+
+            return {
+              id: String(
+                worker?.id ??
+                  item?.workerId ??
+                  item?.freelancerId ??
+                  item?.id
+              ),
+              name:
+                profile?.name ||
+                worker?.name ||
+                worker?.email?.split('@')[0] ||
+                'SkillBridge Member',
+              title:
+                profile?.title ||
+                item?.title ||
+                'Freelance Builder',
+              avatar:
+                profile?.avatar ||
+                worker?.avatar ||
+                null,
+              bio:
+                profile?.bio ||
+                item?.description ||
+                item?.bio ||
+                null,
+              skills: Array.isArray(skills)
+                ? skills.map((skill: any) =>
+                    typeof skill === 'string'
+                      ? skill
+                      : skill?.skill?.name ||
+                        skill?.name ||
+                        ''
+                  ).filter(Boolean)
+                : [],
+              verified:
+                Boolean(
+                  worker?.isVerified ??
+                    item?.isVerified ??
+                    profile?.isVerified
+                ),
+              rating:
+                Number(
+                  item?.rating ??
+                    worker?.rating ??
+                    0
+                ) || 0,
+              reviewsCount:
+                Number(
+                  item?.reviewsCount ??
+                    worker?.reviewsCount ??
+                    0
+                ) || 0,
+              hourlyRate:
+                Number(
+                  item?.hourlyRate ??
+                    item?.rate ??
+                    worker?.hourlyRate ??
+                    0
+                ) || 0,
+              location:
+                profile?.location ||
+                item?.location ||
+                null,
+            };
+          })
+          .filter((item: Freelancer) => item.id);
+
+        setFreelancers(mapped);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Unable to load freelancers.'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadFreelancers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredFreelancers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return freelancers;
+
+    return freelancers.filter((fl) => {
+      return (
+        fl.name.toLowerCase().includes(query) ||
+        fl.title.toLowerCase().includes(query) ||
+        fl.bio?.toLowerCase().includes(query) ||
+        fl.skills.some((skill) =>
+          skill.toLowerCase().includes(query)
+        )
+      );
+    });
+  }, [freelancers, search]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950">
@@ -32,17 +197,21 @@ export default function FreelancersPage() {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Audited Freelance Talent</span>
           </div>
+
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
             Hire Verified Student Builders
           </h1>
+
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            Work with engineers whose technical skills and delivery records have been audited by senior mentors.
+            Discover builders and freelance talent available through
+            SkillBridge.
           </p>
         </div>
 
         <div className="flex justify-center mb-8">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+
             <input
               type="text"
               placeholder="Search by skill, discipline, or name..."
@@ -53,97 +222,161 @@ export default function FreelancersPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredFreelancers.map((fl) => (
-            <ProfileCard
-              key={fl.id}
-              id={fl.id}
-              name={fl.name}
-              avatar={fl.avatar}
-              title={fl.title}
-              bio={fl.bio}
-              rating={fl.rating}
-              reviewsCount={fl.completedJobs}
-              hourlyRate={fl.rate}
-              verifiedTier="industry"
-              skills={fl.skills}
-              type="freelancer"
-              actionLabel="Hire Builder"
-              onAction={() => {
-                setSelectedFreelancer(fl);
-                setMessageSent(false);
-              }}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex min-h-64 items-center justify-center">
+            <Loader2 className="w-7 h-7 animate-spin text-indigo-600" />
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+            {error}
+          </div>
+        ) : filteredFreelancers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
+            <Sparkles className="w-10 h-10 mx-auto text-slate-400 mb-3" />
 
-        <Modal
-          isOpen={!!selectedFreelancer}
-          onClose={() => setSelectedFreelancer(null)}
-          title={messageSent ? 'Proposal Transmitted!' : `Hire ${selectedFreelancer?.name}`}
-          description={
-            messageSent
-              ? 'Your project inquiry has been delivered directly to the builder.'
-              : `${selectedFreelancer?.title} (${selectedFreelancer?.rate})`
-          }
-        >
-          {selectedFreelancer && (
-            <div className="space-y-4 text-xs">
-              {messageSent ? (
-                <div className="text-center py-6 space-y-3">
-                  <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Inquiry Sent with Escrow Protection
-                  </h4>
-                  <p className="text-slate-500 max-w-xs mx-auto">
-                    {selectedFreelancer.name} typically responds within 4 hours. You will receive an email confirmation.
-                  </p>
-                  <Button onClick={() => setSelectedFreelancer(null)} className="mt-2">
-                    Close
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Project Scope & Deliverables
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Describe the feature, architecture, or sprint requirements..."
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+              No freelancers found
+            </h3>
 
-                  <div>
-                    <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                      Estimated Budget (USD)
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="$2,500"
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-800 p-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="pt-2 flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setSelectedFreelancer(null)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={() => setMessageSent(true)}>
-                      Send Contract Proposal
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </Modal>
+            <p className="text-sm text-slate-500 mt-1">
+              Try a different search term.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredFreelancers.map((fl) => (
+              <ProfileCard
+                key={fl.id}
+                id={fl.id}
+                name={fl.name}
+                avatar={
+                  fl.avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    fl.name
+                  )}&background=4f46e5&color=ffffff`
+                }
+                title={fl.title}
+                bio={fl.bio || "SkillBridge freelance builder"}
+                skills={fl.skills}
+                rating={fl.rating}
+                reviewsCount={fl.reviewsCount}
+                hourlyRate={fl.hourlyRate}
+                verifiedTier={fl.verified ? "industry" : undefined}
+                type="freelancer"
+                actionLabel="Hire Builder"
+                onAction={() => {
+                  setSelectedFreelancer(fl);
+                  setMessageSent(false);
+                }}
+              />
+            ))}
+          </div>
+        )}
       </main>
 
       <Footer />
+
+      <Modal
+        isOpen={!!selectedFreelancer}
+        onClose={() => setSelectedFreelancer(null)}
+        title={selectedFreelancer?.name || 'Freelancer'}
+      >
+        {selectedFreelancer && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="relative h-12 w-12 rounded-full overflow-hidden">
+                <img
+                  src={
+                    selectedFreelancer.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      selectedFreelancer.name
+                    )}&background=4f46e5&color=ffffff`
+                  }
+                  alt={selectedFreelancer.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100">
+                  {selectedFreelancer.name}
+                </h3>
+
+                <p className="text-xs text-slate-500">
+                  {selectedFreelancer.title}
+                </p>
+              </div>
+            </div>
+
+            {selectedFreelancer.bio && (
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {selectedFreelancer.bio}
+              </p>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-2">
+                Skills
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedFreelancer.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {selectedFreelancer.rating || '—'}
+                </p>
+                <p className="text-[10px] text-slate-500">Rating</p>
+              </div>
+
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {selectedFreelancer.reviewsCount || 0}
+                </p>
+                <p className="text-[10px] text-slate-500">Reviews</p>
+              </div>
+
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {selectedFreelancer.hourlyRate
+                    ? `$${selectedFreelancer.hourlyRate}`
+                    : '—'}
+                </p>
+                <p className="text-[10px] text-slate-500">Hourly</p>
+              </div>
+            </div>
+
+            {messageSent ? (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center dark:bg-emerald-950/20 dark:border-emerald-900/50">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  Contact request recorded.
+                </p>
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => setMessageSent(true)}
+                >
+                  Contact Freelancer
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
+
+

@@ -12,7 +12,7 @@ export class MentorController {
 
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await mentorService.findById(req.params.id);
+      const data = await mentorService.findById((req.params.id as string));
       sendSuccess(res, 'Mentor retrieved', data);
     } catch (err) { next(err); }
   }
@@ -56,7 +56,7 @@ export class SessionController {
 
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await sessionService.update(req.params.id, req.user!.userId, req.body);
+      const data = await sessionService.update((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Session updated', data);
     } catch (err) { next(err); }
   }
@@ -72,7 +72,7 @@ export class CourseController {
 
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await courseService.findById(req.params.id);
+      const data = await courseService.findById((req.params.id as string));
       sendSuccess(res, 'Course retrieved', data);
     } catch (err) { next(err); }
   }
@@ -86,14 +86,14 @@ export class CourseController {
 
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await courseService.update(req.params.id, req.user!.userId, req.body);
+      const data = await courseService.update((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Course updated', data);
     } catch (err) { next(err); }
   }
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await courseService.delete(req.params.id, req.user!.userId);
+      await courseService.delete((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
@@ -102,3 +102,4 @@ export class CourseController {
 export const mentorController = new MentorController();
 export const sessionController = new SessionController();
 export const courseController = new CourseController();
+

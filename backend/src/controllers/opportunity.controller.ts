@@ -12,7 +12,7 @@ export class OpportunityController {
 
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await opportunityService.findById(req.params.id);
+      const data = await opportunityService.findById((req.params.id as string));
       sendSuccess(res, 'Opportunity retrieved', data);
     } catch (err) { next(err); }
   }
@@ -26,14 +26,14 @@ export class OpportunityController {
 
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await opportunityService.update(req.params.id, req.user!.userId, req.body);
+      const data = await opportunityService.update((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Opportunity updated', data);
     } catch (err) { next(err); }
   }
 
   async deactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await opportunityService.deactivate(req.params.id, req.user!.userId);
+      await opportunityService.deactivate((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
@@ -56,21 +56,21 @@ export class ApplicationController {
 
   async findForOpportunity(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { applications, meta } = await applicationService.findForOpportunity(req.params.id, req.user!.userId, req.query as Record<string, string>);
+      const { applications, meta } = await applicationService.findForOpportunity((req.params.id as string), req.user!.userId, req.query as Record<string, string>);
       sendSuccess(res, 'Applications retrieved', applications, 200, meta);
     } catch (err) { next(err); }
   }
 
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await applicationService.updateStatus(req.params.id, req.user!.userId, req.body);
+      const data = await applicationService.updateStatus((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Application status updated', data);
     } catch (err) { next(err); }
   }
 
   async withdraw(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await applicationService.withdraw(req.params.id, req.user!.userId);
+      await applicationService.withdraw((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
@@ -78,3 +78,4 @@ export class ApplicationController {
 
 export const opportunityController = new OpportunityController();
 export const applicationController = new ApplicationController();
+

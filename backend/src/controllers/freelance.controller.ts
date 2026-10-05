@@ -26,24 +26,25 @@ export class FreelanceController {
 
   async accept(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await freelanceService.accept(req.params.id, req.user!.userId);
+      const data = await freelanceService.accept((req.params.id as string), req.user!.userId);
       sendSuccess(res, 'Contract accepted', data);
     } catch (err) { next(err); }
   }
 
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await freelanceService.updateStatus(req.params.id, req.user!.userId, req.body);
+      const data = await freelanceService.updateStatus((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Contract status updated', data);
     } catch (err) { next(err); }
   }
 
   async cancel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await freelanceService.updateStatus(req.params.id, req.user!.userId, { status: 'CANCELLED' });
+      await freelanceService.updateStatus((req.params.id as string), req.user!.userId, { status: 'CANCELLED' });
       sendNoContent(res);
     } catch (err) { next(err); }
   }
 }
 
 export const freelanceController = new FreelanceController();
+

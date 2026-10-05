@@ -26,24 +26,25 @@ export class SkillExchangeController {
 
   async accept(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await skillExchangeService.accept(req.params.id, req.user!.userId);
+      const data = await skillExchangeService.accept((req.params.id as string), req.user!.userId);
       sendSuccess(res, 'Exchange request accepted', data);
     } catch (err) { next(err); }
   }
 
   async complete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await skillExchangeService.complete(req.params.id, req.user!.userId);
+      const data = await skillExchangeService.complete((req.params.id as string), req.user!.userId);
       sendSuccess(res, 'Exchange marked as complete', data);
     } catch (err) { next(err); }
   }
 
   async cancel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await skillExchangeService.cancel(req.params.id, req.user!.userId);
+      await skillExchangeService.cancel((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
 }
 
 export const skillExchangeController = new SkillExchangeController();
+

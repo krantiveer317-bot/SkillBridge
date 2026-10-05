@@ -20,14 +20,14 @@ export class AdminController {
   async setUserStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { isActive } = req.body as { isActive: boolean };
-      await adminService.setUserStatus(req.params.id, isActive);
+      await adminService.setUserStatus((req.params.id as string), isActive);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
 
   async setUserRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await adminService.setUserRole(req.params.id, req.body.role);
+      const data = await adminService.setUserRole((req.params.id as string), req.body.role);
       sendSuccess(res, 'User role updated', data);
     } catch (err) { next(err); }
   }
@@ -41,10 +41,11 @@ export class AdminController {
 
   async verifyCompany(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await adminService.verifyCompany(req.params.id);
+      const data = await adminService.verifyCompany((req.params.id as string));
       sendSuccess(res, 'Company verified', data);
     } catch (err) { next(err); }
   }
 }
 
 export const adminController = new AdminController();
+

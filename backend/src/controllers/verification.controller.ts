@@ -26,10 +26,11 @@ export class VerificationController {
 
   async review(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await verificationService.review(req.params.id, req.user!.userId, req.body);
+      const data = await verificationService.review((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Verification reviewed', data);
     } catch (err) { next(err); }
   }
 }
 
 export const verificationController = new VerificationController();
+

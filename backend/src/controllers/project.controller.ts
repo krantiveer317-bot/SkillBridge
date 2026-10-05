@@ -26,38 +26,39 @@ export class ProjectController {
 
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectService.findById(req.params.id);
+      const data = await projectService.findById((req.params.id as string));
       sendSuccess(res, 'Project retrieved', data);
     } catch (err) { next(err); }
   }
 
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectService.update(req.params.id, req.user!.userId, req.body);
+      const data = await projectService.update((req.params.id as string), req.user!.userId, req.body);
       sendSuccess(res, 'Project updated', data);
     } catch (err) { next(err); }
   }
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await projectService.delete(req.params.id, req.user!.userId);
+      await projectService.delete((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
 
   async star(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectService.star(req.params.id);
+      const data = await projectService.star((req.params.id as string));
       sendSuccess(res, 'Project starred', { starsCount: data.starsCount });
     } catch (err) { next(err); }
   }
 
   async publish(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await projectService.publish(req.params.id, req.user!.userId);
+      const data = await projectService.publish((req.params.id as string), req.user!.userId);
       sendSuccess(res, 'Project published', data);
     } catch (err) { next(err); }
   }
 }
 
 export const projectController = new ProjectController();
+

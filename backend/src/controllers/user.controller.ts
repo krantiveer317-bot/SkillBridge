@@ -27,7 +27,7 @@ export class UserController {
 
   async getPublicProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await userService.getPublicProfile(req.params.id);
+      const data = await userService.getPublicProfile((req.params.id as string));
       sendSuccess(res, 'Public profile retrieved', data);
     } catch (err) { next(err); }
   }
@@ -48,10 +48,12 @@ export class UserController {
 
   async removeSkill(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await skillService.removeFromUser(req.user!.userId, req.params.skillId);
+      await skillService.removeFromUser(req.user!.userId, (req.params.skillId as string));
       sendNoContent(res);
     } catch (err) { next(err); }
   }
 }
 
 export const userController = new UserController();
+
+

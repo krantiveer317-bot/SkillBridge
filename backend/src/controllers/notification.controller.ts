@@ -12,7 +12,7 @@ export class NotificationController {
 
   async markRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await notificationService.markRead(req.params.id, req.user!.userId);
+      await notificationService.markRead((req.params.id as string), req.user!.userId);
       sendNoContent(res);
     } catch (err) { next(err); }
   }
@@ -26,3 +26,4 @@ export class NotificationController {
 }
 
 export const notificationController = new NotificationController();
+
