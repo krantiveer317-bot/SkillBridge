@@ -4,7 +4,7 @@ import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
 import { optionalAuth } from '../middleware/authenticate';
 import { validate } from '../middleware/validate';
-import { createOpportunitySchema, updateOpportunitySchema, createApplicationSchema, updateApplicationStatusSchema } from '../validators/opportunity.validator';
+import { createOpportunitySchema, updateOpportunitySchema } from '../validators/opportunity.validator';
 import { idParamSchema, paginationSchema } from '../validators/common.validator';
 
 const router = Router();

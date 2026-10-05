@@ -85,37 +85,141 @@ export class SessionService {
 
   async findMine(userId: string, query: { page?: string; limit?: string; role?: string }) {
     const { skip, take, page, limit } = getPaginationParams(query);
-    const ismentor = query.role === 'mentor';
-    const where = ismentor ? { mentorId: userId } : { studentId: userId };
+
+    const where =
+      query.role === 'mentor'
+        ? { mentorUserId: userId }
+        : query.role === 'student'
+          ? { studentId: userId }
+          : {
+              OR: [
+                { studentId: userId },
+                { mentorUserId: userId },
+              ],
+            };
+
     const [sessions, total] = await Promise.all([
       prisma.session.findMany({
-        where, skip, take,
-        include: { mentor: { include: { user: { select: { profile: true } } } } },
+        where,
+        skip,
+        take,
+        include: {
+          mentor: {
+            include: {
+              user: { select: { profile: true } },
+            },
+          },
+        },
         orderBy: { scheduledAt: 'desc' },
       }),
       prisma.session.count({ where }),
     ]);
-    return { sessions, meta: buildPaginationMeta(total, page, limit) };
+
+    return {
+      sessions,
+      meta: buildPaginationMeta(total, page, limit),
+    };
   }
 
   async update(id: string, userId: string, input: UpdateSessionInput) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new AppError('Session not found', 404);
-    const mentor = await prisma.mentor.findUnique({ where: { id: session.mentorId } });
-    if (session.studentId !== userId && mentor?.userId !== userId) throw new AppError('Not authorized', 403);
+    const session = await prisma.session.findUnique({
+      where: { id },
+    });
+
+    if (!session) {
+      throw new AppError('Session not found', 404);
+    }
+
+    const mentor = await prisma.mentor.findUnique({
+      where: { id: session.mentorId },
+    });
+
+    const isStudent = session.studentId === userId;
+    const isMentor = mentor?.userId === userId;
+
+    if (!isStudent && !isMentor) {
+      throw new AppError('Not authorized', 403);
+    }
+
+    const { status } = input;
+
+    // COMPLETED can only be set by the mentor.
+    if (status === 'COMPLETED') {
+      if (!isMentor) {
+        throw new AppError(
+          'Only the mentor can complete a session',
+          403
+        );
+      }
+
+      if (
+        session.status !== 'SCHEDULED' &&
+        session.status !== 'IN_PROGRESS'
+      ) {
+        throw new AppError(
+          'Only a scheduled or in-progress session can be completed',
+          409
+        );
+      }
+    }
+
+
+    // Either participant may cancel before completion.
+    if (status === 'CANCELLED') {
+      if (
+        session.status !== 'SCHEDULED' &&
+        session.status !== 'IN_PROGRESS'
+      ) {
+        throw new AppError(
+          'Only a scheduled or in-progress session can be cancelled',
+          409
+        );
+      }
+    }
+
+    // Only the mentor can mark a student as a no-show.
+    if (status === 'NO_SHOW') {
+      if (!isMentor) {
+        throw new AppError(
+          'Only the mentor can mark a session as no-show',
+          403
+        );
+      }
+
+      if (
+        session.status !== 'SCHEDULED' &&
+        session.status !== 'IN_PROGRESS'
+      ) {
+        throw new AppError(
+          'Only a scheduled or in-progress session can be marked as no-show',
+          409
+        );
+      }
+    }
 
     const updated = await prisma.session.update({
       where: { id },
       data: {
-        status: input.status,
+        status,
         notes: input.notes,
-        ...(input.status === 'COMPLETED' ? { completedAt: new Date() } : {}),
-        ...(input.status === 'CANCELLED' ? { cancelledAt: new Date() } : {}),
+        ...(status === 'COMPLETED'
+          ? { completedAt: new Date() }
+          : {}),
+        ...(status === 'CANCELLED'
+          ? { cancelledAt: new Date() }
+          : {}),
       },
     });
 
-    if (input.status === 'COMPLETED') {
-      await prisma.mentor.update({ where: { id: session.mentorId }, data: { sessionsCompleted: { increment: 1 } } });
+    if (status === 'COMPLETED') {
+      await prisma.mentor.update({
+        where: { id: session.mentorId },
+        data: {
+          sessionsCompleted: {
+            increment: 1,
+          },
+        },
+      });
     }
 
     return updated;

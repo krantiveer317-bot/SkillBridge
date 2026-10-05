@@ -18,7 +18,6 @@ export class AppError extends Error {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction): void {
   // Operational / known errors
   if (err instanceof AppError) {
@@ -67,7 +66,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     return;
   }
 
-  // Unhandled — log and return generic 500
+  // Unhandled â€” log and return generic 500
   logger.error('Unhandled error', {
     message: err.message,
     stack: env.NODE_ENV === 'development' ? err.stack : undefined,

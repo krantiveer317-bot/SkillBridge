@@ -23,8 +23,8 @@ export class PaymentService {
     };
   }
 
-  async initiate(userId: string, _data: { amount: number; type: string }) {
-    // Stub — Razorpay not implemented yet
+  async initiate(_userId: string, _data: { amount: number; type: string }) {
+    // Stub â€” Razorpay not implemented yet
     return {
       message: 'Payment initiation is not yet implemented. Razorpay integration coming soon.',
       stub: true,
@@ -32,7 +32,7 @@ export class PaymentService {
   }
 
   async handleWebhook(_payload: unknown) {
-    // Stub — Razorpay webhook handler not implemented yet
+    // Stub â€” Razorpay webhook handler not implemented yet
     return { received: true };
   }
 }

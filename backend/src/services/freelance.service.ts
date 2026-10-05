@@ -59,14 +59,82 @@ export class FreelanceService {
   }
 
   async updateStatus(id: string, userId: string, input: UpdateContractStatusInput) {
-    const contract = await prisma.freelanceContract.findUnique({ where: { id } });
-    if (!contract) throw new AppError('Contract not found', 404);
-    if (contract.clientId !== userId && contract.freelancerId !== userId) throw new AppError('Not authorized', 403);
+    const contract = await prisma.freelanceContract.findUnique({
+      where: { id },
+    });
+
+    if (!contract) {
+      throw new AppError('Contract not found', 404);
+    }
+
+    const isClient = contract.clientId === userId;
+    const isFreelancer = contract.freelancerId === userId;
+
+    if (!isClient && !isFreelancer) {
+      throw new AppError('Not authorized', 403);
+    }
+
+    const { status } = input;
+
+    // Only the assigned freelancer can complete an active contract.
+    if (status === 'COMPLETED') {
+      if (!isFreelancer) {
+        throw new AppError(
+          'Only the assigned freelancer can complete the contract',
+          403
+        );
+      }
+
+      if (contract.status !== 'ACTIVE') {
+        throw new AppError(
+          'Only an active contract can be completed',
+          409
+        );
+      }
+    }
+
+    // Either participant can raise a dispute while the contract is active.
+    if (status === 'DISPUTED') {
+      if (contract.status !== 'ACTIVE') {
+        throw new AppError(
+          'Only an active contract can be disputed',
+          409
+        );
+      }
+    }
+
+    // Only the client can cancel an open contract.
+    if (status === 'CANCELLED') {
+      if (!isClient) {
+        throw new AppError(
+          'Only the client can cancel the contract',
+          403
+        );
+      }
+
+      if (contract.status !== 'OPEN') {
+        throw new AppError(
+          'Only an open contract can be cancelled',
+          409
+        );
+      }
+    }
+
+    // ACTIVE is assigned exclusively through the accept endpoint.
+    if (status === 'ACTIVE') {
+      throw new AppError(
+        'Contracts become active when accepted',
+        409
+      );
+    }
+
     return prisma.freelanceContract.update({
       where: { id },
       data: {
-        status: input.status,
-        ...(input.status === 'COMPLETED' ? { completedAt: new Date() } : {}),
+        status,
+        ...(status === 'COMPLETED'
+          ? { completedAt: new Date() }
+          : {}),
       },
     });
   }
