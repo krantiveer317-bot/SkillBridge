@@ -1,0 +1,678 @@
+// ============================================================
+// PRISMA CONFIGURATION
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  STUDENT
+  MENTOR
+  COMPANY
+  ADMIN
+}
+
+enum SkillCategory {
+  FRONTEND
+  BACKEND
+  DEVOPS_CLOUD
+  AI_ML
+  MOBILE
+  DESIGN_UX
+  BLOCKCHAIN
+  DATA_SCIENCE
+  OTHER
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum VerificationTier {
+  NONE
+  PEER
+  MENTOR
+  INDUSTRY
+}
+
+enum VerificationStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OpportunityType {
+  JOB
+  INTERNSHIP
+  FREELANCE
+}
+
+enum LocationType {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  INTERVIEW_SCHEDULED
+  OFFER_EXTENDED
+  REJECTED
+  ARCHIVED
+  WITHDRAWN
+}
+
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ExchangeStatus {
+  OPEN
+  MATCHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ContractStatus {
+  OPEN
+  ACTIVE
+  COMPLETED
+  DISPUTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  FREELANCE_MILESTONE
+  MENTORSHIP_BOOKING
+  COURSE_PURCHASE
+  PRIZE_BOUNTY
+  WITHDRAWAL
+}
+
+enum NotificationType {
+  APPLICATION_UPDATE
+  VERIFICATION_UPDATE
+  SESSION_REMINDER
+  NEW_MESSAGE
+  SKILL_EXCHANGE
+  PAYMENT
+  SYSTEM
+}
+
+
+// ============================================================
+// USER & PROFILE
+// ============================================================
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  role           UserRole @default(STUDENT)
+  isVerified     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  emailVerifiedAt DateTime?
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  profile                  Profile?
+  skills                   UserSkill[]
+  projects                 Project[]
+  verificationRequests     VerificationRequest[] @relation("VerificationApplicant")
+  reviewedVerifications    VerificationRequest[] @relation("VerificationReviewer")
+  exchangeRequestsMade     SkillExchangeRequest[] @relation("ExchangeRequester")
+  exchangeRequestsReceived  SkillExchangeRequest[] @relation("ExchangeReceiver")
+  applications             Application[]
+  mentorProfile            Mentor?
+  companyProfile           Company?
+  sessions                 Session[] @relation("StudentSessions")
+  mentorSessions           Session[] @relation("MentorUserSessions")
+  payments                 Payment[]
+  notifications            Notification[]
+  earnings                 EarningTransaction[]
+  freelanceContracts       FreelanceContract[] @relation("FreelanceClient")
+  freelanceWork            FreelanceContract[] @relation("FreelanceWorker")
+  refreshTokens            RefreshToken[]
+
+  // Email OTP verification
+  emailVerificationCodes   EmailVerificationCode[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+
+  // User display information
+  name         String?
+
+  avatar       String?
+  bio          String?
+  title        String?
+  location     String?
+  githubUrl    String?
+  linkedinUrl  String?
+  portfolioUrl String?
+  websiteUrl   String?
+  trustScore   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+
+// ============================================================
+// EMAIL VERIFICATION OTP
+// ============================================================
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_codes")
+}
+
+
+// ============================================================
+// SKILLS
+// ============================================================
+
+model Skill {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  category    SkillCategory
+  description String?
+  iconUrl     String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userSkills        UserSkill[]
+  projectSkills     ProjectSkill[]
+  offeringExchanges SkillExchangeRequest[] @relation("OfferingSkill")
+  seekingExchanges  SkillExchangeRequest[] @relation("SeekingSkill")
+  opportunitySkills OpportunitySkill[]
+
+  @@index([category])
+  @@map("skills")
+}
+
+
+model UserSkill {
+  id               String           @id @default(cuid())
+  userId           String
+  skillId          String
+  level            SkillLevel       @default(BEGINNER)
+  isVerified       Boolean          @default(false)
+  verificationTier VerificationTier @default(NONE)
+  verifiedById     String?
+  verifiedAt       DateTime?
+  endorsersCount   Int              @default(0)
+  projectCount     Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+  @@index([userId])
+  @@index([skillId])
+  @@map("user_skills")
+}
+
+
+// ============================================================
+// PROJECTS
+// ============================================================
+
+model Project {
+  id               String           @id @default(cuid())
+  authorId         String
+  title            String
+  description      String
+  longDescription  String?
+  githubUrl        String?
+  liveUrl          String?
+  bannerImage      String?
+  status           ProjectStatus    @default(DRAFT)
+  verificationTier VerificationTier @default(NONE)
+  starsCount       Int              @default(0)
+  viewsCount       Int              @default(0)
+  teamSize         Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  author               User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  skills               ProjectSkill[]
+  verificationRequests VerificationRequest[]
+
+  @@index([authorId])
+  @@index([status])
+  @@map("projects")
+}
+
+
+model ProjectSkill {
+  id        String @id @default(cuid())
+  projectId String
+  skillId   String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, skillId])
+  @@index([skillId])
+  @@map("project_skills")
+}
+
+
+// ============================================================
+// VERIFICATION
+// ============================================================
+
+model VerificationRequest {
+  id             String             @id @default(cuid())
+  projectId      String
+  applicantId    String
+  reviewerId     String?
+  requestedTier  VerificationTier
+  status         VerificationStatus @default(PENDING)
+  reviewerNotes  String?
+  proofArtifacts String[]
+  submittedAt    DateTime           @default(now())
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicant User    @relation("VerificationApplicant", fields: [applicantId], references: [id])
+  reviewer  User?   @relation("VerificationReviewer", fields: [reviewerId], references: [id])
+
+  @@index([projectId])
+  @@index([applicantId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("verification_requests")
+}
+
+
+// ============================================================
+// SKILL EXCHANGE
+// ============================================================
+
+model SkillExchangeRequest {
+  id              String         @id @default(cuid())
+  requesterId     String
+  receiverId      String?
+  offeringSkillId String
+  seekingSkillId  String
+  offeringLevel   SkillLevel
+  seekingLevel    SkillLevel
+  message         String
+  status          ExchangeStatus @default(OPEN)
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  requester     User  @relation("ExchangeRequester", fields: [requesterId], references: [id])
+  receiver      User? @relation("ExchangeReceiver", fields: [receiverId], references: [id])
+  offeringSkill Skill @relation("OfferingSkill", fields: [offeringSkillId], references: [id])
+  seekingSkill  Skill @relation("SeekingSkill", fields: [seekingSkillId], references: [id])
+
+  @@index([requesterId])
+  @@index([receiverId])
+  @@index([offeringSkillId])
+  @@index([seekingSkillId])
+  @@index([status])
+  @@map("skill_exchange_requests")
+}
+
+
+// ============================================================
+// COMPANIES & OPPORTUNITIES
+// ============================================================
+
+model Company {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  logoUrl     String?
+  website     String?
+  description String?
+  industry    String?
+  size        String?
+  location    String?
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+
+  @@index([isVerified])
+  @@map("companies")
+}
+
+
+model Opportunity {
+  id                      String          @id @default(cuid())
+  companyId               String
+  type                    OpportunityType
+  title                   String
+  category                String
+  description             String
+  compensation            String
+  locationType            LocationType    @default(REMOTE)
+  minimumVerificationTier VerificationTier @default(NONE)
+  deadline                DateTime?
+  isActive                Boolean         @default(true)
+  isFeatured              Boolean         @default(false)
+  applicantCount          Int             @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  skills       OpportunitySkill[]
+  applications Application[]
+
+  @@index([companyId])
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+  @@index([deadline])
+  @@map("opportunities")
+}
+
+
+model OpportunitySkill {
+  id            String @id @default(cuid())
+  opportunityId String
+  skillId       String
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  skill       Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, skillId])
+  @@index([skillId])
+  @@map("opportunity_skills")
+}
+
+
+// ============================================================
+// APPLICATIONS
+// ============================================================
+
+model Application {
+  id            String            @id @default(cuid())
+  applicantId   String
+  opportunityId String
+  status        ApplicationStatus @default(SUBMITTED)
+  coverLetter   String?
+  feedback      String?
+  appliedAt     DateTime          @default(now())
+  lastUpdatedAt DateTime          @updatedAt
+
+  applicant   User        @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantId, opportunityId])
+  @@index([applicantId])
+  @@index([opportunityId])
+  @@index([status])
+  @@map("applications")
+}
+
+
+// ============================================================
+// MENTORS, COURSES & SESSIONS
+// ============================================================
+
+model Mentor {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  bio               String?
+  hourlyRate        Float    @default(0)
+  rating            Float    @default(0)
+  reviewsCount      Int      @default(0)
+  sessionsCompleted Int      @default(0)
+  isAvailable       Boolean  @default(true)
+  expertise         String[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses  Course[]
+  sessions Session[]
+  reviews  MentorReview[]
+
+  @@map("mentors")
+}
+
+
+model Course {
+  id          String   @id @default(cuid())
+  mentorId    String
+  title       String
+  description String?
+  price       Float    @default(0)
+  isPublished Boolean  @default(false)
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mentor Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([isPublished])
+  @@map("courses")
+}
+
+
+model Session {
+  id           String        @id @default(cuid())
+  mentorId     String
+  mentorUserId String
+  studentId    String
+  scheduledAt  DateTime
+  durationMins Int           @default(60)
+  status       SessionStatus @default(SCHEDULED)
+  topic        String?
+  notes        String?
+  meetingUrl   String?
+  price        Float         @default(0)
+  cancelledAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  mentor     Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  student    User   @relation("StudentSessions", fields: [studentId], references: [id])
+  mentorUser User   @relation("MentorUserSessions", fields: [mentorUserId], references: [id])
+
+  @@index([mentorId])
+  @@index([mentorUserId])
+  @@index([studentId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("sessions")
+}
+
+
+model MentorReview {
+  id        String   @id @default(cuid())
+  mentorId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  mentor Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@map("mentor_reviews")
+}
+
+
+// ============================================================
+// FREELANCING
+// ============================================================
+
+model FreelanceContract {
+  id           String         @id @default(cuid())
+  clientId     String
+  freelancerId String?
+  title        String
+  description  String
+  budget       Float
+  status       ContractStatus @default(OPEN)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  client     User  @relation("FreelanceClient", fields: [clientId], references: [id])
+  freelancer User? @relation("FreelanceWorker", fields: [freelancerId], references: [id])
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@map("freelance_contracts")
+}
+
+
+// ============================================================
+// PAYMENTS & EARNINGS
+// ============================================================
+
+model Payment {
+  id         String        @id @default(cuid())
+  userId     String
+  amount     Float
+  type       PaymentType
+  status     PaymentStatus @default(PENDING)
+  gateway    String?
+  gatewayRef String?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@map("payments")
+}
+
+
+model EarningTransaction {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String
+  client    String?
+  type      PaymentType
+  amount    Float
+  fee       Float         @default(0)
+  netAmount Float
+  status    PaymentStatus @default(PENDING)
+  invoiceId String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@map("earning_transactions")
+}
+
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
