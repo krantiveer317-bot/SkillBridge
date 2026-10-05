@@ -16,6 +16,7 @@
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@netlify/functions": "^6.0.2",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -27,6 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "nodemailer": "^10.0.10",
+    "serverless-http": "^4.0.0",
     "winston": "^3.17.0",
     "zod": "^3.23.8"
   },
